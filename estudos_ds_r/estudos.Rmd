@@ -1,0 +1,195 @@
+---
+title: "estudos"
+author: "João Palma Neto"
+date: "08/03/2020"
+output: html_document
+
+---
+
+```{r}
+
+install.packages('broom')
+```
+
+```{r}
+
+  pcts = c("dplyr", "tidyr", "dslabs", "ggplot2")
+  lapply(pcts, library, character.only = T)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+CURSO: INTRODUCTION TO FUNCTION WRITTING IN R - DATACAMP 
+
+Modulo 2:
+
+  retornando múltiplos valores
+```{r}
+library(zeallot)
+notas = c(3,5,8)
+ra = '237550'
+
+#metodo 1: operador de atribuição múltipla  
+
+stt <- function(notas){
+  media <- mean(notas)
+  mediana <- median(notas)
+  
+  return(list(media, mediana))
+}
+
+c(media, mediana) %<-% stt(notas)
+
+media
+mediana
+
+
+#método 2: atributos 
+
+stt_2 <- stt <- function(notas, ra){
+  infos <- c(mean(notas), median(notas), ra)
+  attr(notas, "infos") <- infos
+  
+  return(notas)
+}
+
+resultados <- stt_2(notas, ra)
+str(resultados)
+```
+
+CURSO: INTRODUCTION TO DATA - DATACAMP
+
+
+
+```{r}
+
+
+```
+
+
+```{r}
+data("trump_tweets")
+glimpse(trump_tweets)
+```
+
+Discretizando variáveis contínuas:
+```{r}
+trump_tweets <- trump_tweets %>% 
+  mutate(stt_retweet = ifelse(retweet_count > 50000, "bombou", "flopou"))
+
+trump_tweets %>% filter(stt_retweet == "bombou")
+```
+
+Tipo de estudo: observacional vs experimental
+
+No primeiro os voluntários escolhem de qual grupo participarão, no segundo o grupo lhes é atribuido aleatoriamente. Em experimentos é possível inferir causalidade uma vez que a incidência de outros fatores determinantes é aleatoriamente distribuída entre os dois grupos.
+
+
+Gerando amostra aleatoria da base de tweets:
+```{r}
+
+amostra <- trump_tweets %>%
+  sample_n(200) %>%
+  mutate(num_chr = nchar(text))
+
+head(amostra)
+
+```
+
+
+Separando a coluna do número de caracteres em quartis (a.d.)
+```{r}
+quartis <- ntile(amostra$num_chr, 4)
+
+amostra <- amostra %>%
+  filter(is_retweet == FALSE)
+         
+
+```
+
+
+
+Regressão linear simples (a.d.)
+```{r}
+
+y <- as.numeric(amostra$retweet_count)
+x <- as.numeric(amostra$favorite_count)
+df <- data.frame(x, y)
+
+ols <- lm(formula = y ~ x, data = df)
+summary(ols)
+
+ggplot(amostra, aes(x = favorite_count , y = retweet_count)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+Amostragem: randômica, estratificada, por clusters
+
+  Randômica consiste em simplesmente selecionar parte da população de maneira aleatoria. Estratificada consiste em determinar grupos homogêneos dentro da população conforme características que possam interferir no estudo, de modo que todos os estratos sejam igualmente representados na amostra. 
+  Na amostra por conglomerados, os grupos são heterogêneos e similares entre si, adicionando uma etapa na amostragem; primeiro sortear alguns dos clusters, depois alguns individuos dos clusters sorteados. 
+  
+```{r}
+
+#Para exemplificar, amostragem de doeças contagiosas nos EUA
+
+library(dslabs)
+help(package = "dslabs")
+
+data("us_contagious_diseases")
+glimpse(us_contagious_diseases)
+
+us_contagious_diseases <- us_contagious_diseases %>%
+                            filter(is.na(population) == FALSE) %>%
+                            mutate(inf_rate = count/population * 1000) 
+                            
+```
+
+```{r}
+#Amostragem randômica de sarampo 
+
+rand <- us_contagious_diseases %>%
+            filter(disease == "Measles" & state != "District Of Columbia") %>%
+            select(state, year, inf_rate) %>%
+            sample_n(size = 150) 
+
+#Amostragem de sarampo  estratificada por estado 
+
+estrat <- us_contagious_diseases %>% 
+            filter(disease == "Measles" & state != "District Of Columbia") %>%
+            select(state, year, inf_rate) %>%
+            group_by(state) %>%
+            sample_n(3)
+
+```
+
+CURSO: DATA VIZ WITH GGPLOT2 (PART 1) - DATACAMP
+
+CURSO: CORRELATION AND REGRESSION IN R - DATACAMP 
+
+Soma dos Quadrados de Erro (SQE, em inglês SSE) é a somatória quadrática dos residuais de um modelo linear, ou seja, o desvio dos valores observados em torno dos valores previstos. A Soma dos Quadrados do Fator A (SQA ou SST) aplica o mesmo processo para medir desta vez o desvio das observações em torno da média, considerando a média como o modelo neutro. A divisão de SSE por SST subtraída de 1 nos dá a fração da variabilidade total de Y que é explicada pelo modelo (variabilidade total - variabilidade dos residuais), medida chamada $R^2$ 
+
+```{r}
+library(dslabs)
+library(broom)
+
+data("diamonds")
+amostra <- sample_n(diamonds, size = 250)
+plot(amostra$carat, amostra$price)
+
+mod <- lm(price ~ carat, data = amostra)
+summary(mod)
+
+#calculando SSE, SST e R^2 do modelo
+
+#variancia dos residuais
+SSE <- var(residuals(mod))
+#variancia total de Y
+SST <- var(amostra$price)
+
+R_squared <- 1 - SSE/SST
+```
+
